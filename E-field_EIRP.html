@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Field to EIRP Converter</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f9;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .converter-box {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 420px;
+        }
+        h2 {
+            color: #1a365d;
+            margin-top: 0;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        input[type="text"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        input[type="text"]:focus, select:focus {
+            border-color: #3182ce;
+            outline: none;
+        }
+        .result-box {
+            background-color: #ebf8ff;
+            border-left: 4px solid #3182ce;
+            padding: 15px;
+            margin-top: 25px;
+            border-radius: 4px;
+        }
+        .result-title {
+            font-size: 0.9rem;
+            color: #2b6cb0;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .result-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        .mw-value {
+            font-size: 1.1rem;
+            color: #4a5568;
+            font-weight: normal;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="converter-box">
+    <h2>E-Field to EIRP Converter</h2>
+    
+    <div class="input-group">
+        <label for="eField">E-Field Value (dBµV/m):</label>
+        <input type="text" id="eField" placeholder="e.g., 40" oninput="calculateEIRP()">
+    </div>
+    
+    <div class="input-group">
+        <label for="distance">Measurement Distance (d):</label>
+        <select id="distance" onchange="calculateEIRP()">
+            <option value="3" selected>3 meters</option>
+            <option value="10">10 meters</option>
+            <option value="30">30 meters</option>
+        </select>
+    </div>
+    
+    <div class="result-box">
+        <div class="result-title">Equivalent EIRP:</div>
+        <div id="result" class="result-value">--</div>
+    </div>
+</div>
+
+<script>
+function calculateEIRP() {
+    const eFieldInput = document.getElementById('eField').value;
+    const distance = parseFloat(document.getElementById('distance').value);
+    const resultDiv = document.getElementById('result');
+    
+    // Trim and validate input numeric value
+    const eField = parseFloat(eFieldInput.trim());
+    
+    if (isNaN(eField) || eFieldInput.trim() === "") {
+        resultDiv.innerHTML = "--";
+        return;
+    }
+    
+    // EIRP (dBm) = E (dBuV/m) + 20*log10(d) - 104.77
+    const eirpdBm = eField + (20 * Math.log10(distance)) - 104.77;
+    
+    // Convert dBm to mW: P(mW) = 10^(P(dBm)/10)
+    const eirpmW = Math.pow(10, eirpdBm / 10);
+    
+    // Format mW display based on its scale
+    let mwDisplay = "";
+    if (eirpmW >= 1000) {
+        mwDisplay = (eirpmW / 1000).toFixed(2) + " W";
+    } else if (eirpmW < 0.001) {
+        mwDisplay = (eirpmW * 1000000).toFixed(2) + " µW";
+    } else {
+        mwDisplay = eirpmW.toFixed(4) + " mW";
+    }
+    
+    // Output the combined result string
+    resultDiv.innerHTML = `${eirpdBm.toFixed(2)} dBm <span class="mw-value">(${mwDisplay})</span>`;
+}
+</script>
+
+</body>
+</html>
