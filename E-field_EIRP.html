@@ -126,10 +126,8 @@ function calculateEIRP() {
     let mwDisplay = "";
     if (eirpmW >= 1000) {
         mwDisplay = (eirpmW / 1000).toFixed(2) + " W";
-    } else if (eirpmW < 0.000001) {
-        mwDisplay = (eirpmW * 1000000000).toFixed(2) + " nW";
     } else if (eirpmW < 0.001) {
-        mwDisplay = (eirpmW * 1000000).toFixed(2) + " µW";
+        mwDisplay = (eirpmW * 1000).toFixed(2) + " µW";
     } else {
         mwDisplay = eirpmW.toFixed(4) + " mW";
     }
