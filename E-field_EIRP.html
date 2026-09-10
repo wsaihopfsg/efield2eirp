@@ -128,6 +128,8 @@ function calculateEIRP() {
         mwDisplay = (eirpmW / 1000).toFixed(2) + " W";
     } else if (eirpmW < 0.001) {
         mwDisplay = (eirpmW * 1000000).toFixed(2) + " µW";
+    } else if (eirpmW < 0.000001) {
+        mwDisplay = (eirpmW * 1000000000).toFixed(2) + " nW";
     } else {
         mwDisplay = eirpmW.toFixed(4) + " mW";
     }
