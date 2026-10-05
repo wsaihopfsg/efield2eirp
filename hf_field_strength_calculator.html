@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HF (13.56MHz) Field Strength Calculator</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+              900: '#134e4a',
+            },
+            tech: {
+              850: '#161e2e',
+              900: '#0f172a',
+              950: '#020617',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(20, 184, 166, 0.3);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(20, 184, 166, 0.6);
+    }
+  </style>
+</head>
+<body class="bg-tech-950 text-slate-200 min-h-screen flex flex-col antialiased selection:bg-teal-500 selection:text-white">
+
+  <header class="border-b border-slate-800 bg-tech-900/80 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-3.5 sm:px-6 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-teal-500/20 text-white font-bold text-lg">
+          <i class="fa-solid fa-wave-square"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg sm:text-xl text-white tracking-tight leading-none">HF Field Strength Calculator</h1>
+          <p class="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            13.56 MHz RFID / NFC &bull; ANSI C63.10 Standard
+          </p>
+        </div>
+      </div>
+      <div class="hidden sm:flex items-center gap-3">
+        <span class="px-2.5 py-1 text-xs font-mono-code bg-slate-800 text-teal-400 rounded-md border border-slate-700/80">
+          λ ≈ 22.11 m | λ/2π ≈ 3.52 m
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8 sm:px-6 flex-grow w-full">
+    
+    <!-- Presets bar -->
+    <div class="mb-6 flex flex-wrap items-center gap-2 text-xs">
+      <span class="text-slate-400 flex items-center gap-1.5 font-medium mr-1">
+        <i class="fa-solid fa-bolt text-teal-400"></i> Quick Presets:
+      </span>
+      <button onclick="loadPreset(3, 78.87, 10, 'H')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition">
+        3m (78.87 dBµV/m) &rarr; 10m [dBµA/m]
+      </button>
+      <button onclick="loadPreset(3, 78.87, 30, 'E')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition">
+        3m (78.87 dBµV/m) &rarr; 30m [dBµV/m]
+      </button>
+      <button onclick="loadPreset(10, 67.03, 30, 'H')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition">
+        10m (67.03 dBµV/m) &rarr; 30m [dBµA/m]
+      </button>
+      <button onclick="resetDefaults()" class="ml-auto px-2.5 py-1.5 text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-rotate-left mr-1"></i> Reset
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- Input Panel (Left Column) -->
+      <section class="lg:col-span-6 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-7 shadow-xl shadow-black/40">
+        <div class="flex items-center justify-between pb-4 mb-5 border-b border-slate-800">
+          <h2 class="text-base font-semibold text-white flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-teal-400"></i> Input Parameters
+          </h2>
+          <span class="text-xs bg-teal-500/10 text-teal-300 border border-teal-500/20 px-2 py-0.5 rounded-full font-medium">
+            Live Calculation
+          </span>
+        </div>
+
+        <form id="calcForm" onsubmit="event.preventDefault();" class="space-y-5">
+          <!-- Input 1: Measurement Distance -->
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label for="d_measure" class="text-sm font-medium text-slate-300">
+                1. Test Report Distance (<span class="font-mono-code text-teal-400">d<sub>measure</sub></span>)
+              </label>
+              <span class="text-xs text-slate-500">Fixed options</span>
+            </div>
+            <div class="relative">
+              <select id="d_measure" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-4 py-3 appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition text-sm">
+                <option value="3" selected>3 meters (Near-field region, &lt; 3.52m)</option>
+                <option value="10">10 meters (Far-field region, &gt; 3.52m)</option>
+                <option value="30">30 meters (Far-field region, &gt; 3.52m)</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+              </div>
+            </div>
+            <p class="text-xs text-slate-500 mt-1.5">Standard measurement test distances defined by test standards.</p>
+          </div>
+
+          <!-- Input 2: Measured E-field strength -->
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label for="fs_max" class="text-sm font-medium text-slate-300">
+                2. Measured E-Field Strength (<span class="font-mono-code text-teal-400">FS<sub>max</sub></span>)
+              </label>
+              <span class="text-xs text-slate-400 font-mono-code">dBµV/m</span>
+            </div>
+            <div class="relative rounded-xl shadow-sm">
+              <input type="number" step="any" id="fs_max" value="78.87" placeholder="e.g. 78.87" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-4 py-3 pr-20 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition text-sm font-mono-code">
+              <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400 text-xs font-mono-code">
+                dBµV/m
+              </div>
+            </div>
+            <div id="fs_error" class="hidden text-rose-400 text-xs mt-1">Please enter a valid numeric field strength.</div>
+          </div>
+
+          <!-- Input 3: Target Conversion Distance -->
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label for="d_limit" class="text-sm font-medium text-slate-300">
+                3. Distance for Conversion (<span class="font-mono-code text-teal-400">d<sub>limit</sub></span>)
+              </label>
+              <span class="text-xs text-slate-400 font-mono-code">meters</span>
+            </div>
+            <div class="relative rounded-xl shadow-sm">
+              <input type="number" step="any" min="0.01" id="d_limit" value="10" placeholder="e.g. 10" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-4 py-3 pr-16 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition text-sm font-mono-code">
+              <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400 text-xs font-mono-code">
+                m
+              </div>
+            </div>
+            <div class="flex gap-2 mt-2">
+              <span class="text-xs text-slate-500">Common distances:</span>
+              <button type="button" onclick="setLimitDistance(3)" class="text-xs px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition">3 m</button>
+              <button type="button" onclick="setLimitDistance(10)" class="text-xs px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition">10 m</button>
+              <button type="button" onclick="setLimitDistance(30)" class="text-xs px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition">30 m</button>
+              <button type="button" onclick="setLimitDistance(300)" class="text-xs px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition">300 m</button>
+            </div>
+            <div id="d_error" class="hidden text-rose-400 text-xs mt-1">Distance must be greater than 0 meters.</div>
+          </div>
+
+          <!-- Input 4: Conversion Output Unit -->
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label for="output_unit" class="text-sm font-medium text-slate-300">
+                4. Conversion Output Unit
+              </label>
+              <span class="text-xs text-slate-500">E-field or H-field</span>
+            </div>
+            <div class="relative">
+              <select id="output_unit" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-4 py-3 appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition text-sm">
+                <option value="H" selected>H-field (dBµA/m) &mdash; with 51.53 dB wave impedance</option>
+                <option value="E">E-field (dBµV/m) &mdash; direct distance extrapolation</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+              </div>
+            </div>
+            <p class="text-xs text-slate-500 mt-1.5" id="unitHelperText">
+              H-field applies <span class="font-mono-code text-teal-400">H = E - 20·log₁₀(377 Ω)</span> (subtracts ~51.53 dB).
+            </p>
+          </div>
+        </form>
+      </section>
+
+      <!-- Results & Breakdown Panel (Right Column) -->
+      <section class="lg:col-span-6 space-y-6">
+        
+        <!-- Primary Output Display Card -->
+        <div class="bg-gradient-to-br from-slate-900 to-tech-900 border border-teal-500/30 rounded-2xl p-6 sm:p-7 shadow-2xl relative overflow-hidden">
+          <div class="absolute -right-8 -top-8 w-36 h-36 bg-teal-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-semibold uppercase tracking-wider text-teal-400 flex items-center gap-1.5">
+              <i class="fa-solid fa-calculator"></i> Calculated Result
+            </span>
+            <span id="regimeBadge" class="text-xs font-mono-code px-2.5 py-1 rounded-full bg-teal-950/80 text-teal-300 border border-teal-700/60">
+              Near &rarr; Far Transition
+            </span>
+          </div>
+
+          <div class="my-4">
+            <div class="text-slate-400 text-xs font-medium uppercase tracking-wide">
+              Field Strength at <span id="resDistLabel" class="text-white font-mono-code font-bold">10 m</span>
+            </div>
+            <div class="flex items-baseline gap-3 mt-1 flex-wrap">
+              <span id="finalValue" class="text-4xl sm:text-5xl font-black font-mono-code text-white tracking-tight">
+                15.50
+              </span>
+              <span id="finalUnit" class="text-xl sm:text-2xl font-bold font-mono-code text-teal-400">
+                dBµA/m
+              </span>
+            </div>
+            <div id="linearValue" class="text-xs text-slate-400 font-mono-code mt-1.5">
+              &approx; 5.96 µA/m (0.00596 mA/m)
+            </div>
+          </div>
+
+          <!-- Secondary/Comparative Values -->
+          <div class="grid grid-cols-2 gap-3 pt-4 mt-4 border-t border-slate-800 text-xs">
+            <div class="bg-slate-950/60 rounded-xl p-3 border border-slate-800/80">
+              <span class="text-slate-400 block mb-0.5">Extrapolated E-field:</span>
+              <span id="eFieldEquivalent" class="font-mono-code font-semibold text-slate-200 text-sm">67.03 dBµV/m</span>
+            </div>
+            <div class="bg-slate-950/60 rounded-xl p-3 border border-slate-800/80">
+              <span class="text-slate-400 block mb-0.5">Distance Roll-off:</span>
+              <span id="distanceCorrectionSummary" class="font-mono-code font-semibold text-amber-400 text-sm">-11.84 dB</span>
+            </div>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="mt-5 flex gap-2">
+            <button onclick="copyResult()" id="copyBtn" class="flex-1 py-2 px-3 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-medium text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-lg shadow-teal-700/30">
+              <i class="fa-regular fa-copy"></i> <span id="copyBtnText">Copy Result</span>
+            </button>
+            <button onclick="toggleDetails()" class="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-circle-info"></i> Formula Breakdown
+            </button>
+          </div>
+        </div>
+
+        <!-- Step-by-Step Breakdown Accordion/Card -->
+        <div id="breakdownSection" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <h3 class="text-sm font-semibold text-white mb-4 flex items-center justify-between">
+            <span class="flex items-center gap-2">
+              <i class="fa-solid fa-list-ol text-teal-400"></i> Mathematical Breakdown (ANSI C63.10)
+            </span>
+            <span class="text-xs font-mono-code text-slate-400 font-normal">f = 13.56 MHz</span>
+          </h3>
+
+          <div class="space-y-4 text-xs">
+            <!-- Step 1: Near-field boundary -->
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
+              <div class="flex items-center justify-between text-slate-300 font-medium mb-1">
+                <span>1. Transition Boundary (<span class="font-mono-code text-teal-400">d<sub>nearfield</sub></span>)</span>
+                <span class="font-mono-code text-teal-300">3.519 m</span>
+              </div>
+              <div class="text-slate-400 font-mono-code text-[11px] leading-relaxed">
+                λ = c / f = 2.998×10⁸ / 13.56×10⁶ ≈ 22.11 m<br>
+                d<sub>nearfield</sub> = λ / (2π) = 22.11 / (2 × 3.14159) = <span class="text-slate-200">3.519 m</span>
+              </div>
+            </div>
+
+            <!-- Step 2: Piecewise formula applied -->
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
+              <div class="flex items-center justify-between text-slate-300 font-medium mb-1">
+                <span>2. Distance Correction Formula</span>
+                <span id="step2Regime" class="font-mono-code text-amber-400">-11.84 dB</span>
+              </div>
+              <div id="step2Formula" class="text-slate-400 font-mono-code text-[11px] leading-relaxed">
+                Correction = -40·log₁₀(3.52 / 3.0) - 20·log₁₀(10.0 / 3.52)
+              </div>
+              <div id="step2Math" class="mt-1 text-slate-300 font-mono-code text-[11px]">
+                = -2.77 dB (near-field 40dB/dec) + (-9.07 dB far-field 20dB/dec) = <strong>-11.84 dB</strong>
+              </div>
+            </div>
+
+            <!-- Step 3: Extrapolated E-field -->
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
+              <div class="flex items-center justify-between text-slate-300 font-medium mb-1">
+                <span>3. Extrapolated Electric Field (E-field)</span>
+                <span id="step3Result" class="font-mono-code text-emerald-400">67.03 dBµV/m</span>
+              </div>
+              <div id="step3Math" class="text-slate-400 font-mono-code text-[11px]">
+                FS<sub>limit</sub> = FS<sub>max</sub> + Correction = 78.87 + (-11.84) = <span class="text-slate-200">67.03 dBµV/m</span>
+              </div>
+            </div>
+
+            <!-- Step 4: Wave Impedance (if H-field) -->
+            <div id="step4Container" class="p-3.5 rounded-xl bg-slate-950/70 border border-teal-800/40">
+              <div class="flex items-center justify-between text-slate-300 font-medium mb-1">
+                <span>4. Free-space Wave Impedance Conversion (Z₀)</span>
+                <span class="font-mono-code text-teal-400">-51.53 dB</span>
+              </div>
+              <div class="text-slate-400 font-mono-code text-[11px] leading-relaxed">
+                Z₀ = 120π ≈ 376.73 Ω &rarr; 20·log₁₀(377) = 51.53 dBΩ<br>
+                H (dBµA/m) = E (dBµV/m) - 51.53 dB = 67.03 - 51.53 = <span class="text-teal-300 font-bold">15.50 dBµA/m</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ANSI C63.10 Reference Guide Box -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-xs text-slate-400">
+          <div class="flex items-center gap-2 font-medium text-slate-300 mb-1.5">
+            <i class="fa-solid fa-book-bookmark text-slate-500"></i> Standard Reference Summary
+          </div>
+          <ul class="list-disc list-inside space-y-1 text-[11px] text-slate-400">
+            <li><strong>Near-Field (d &lt; 3.52 m):</strong> Magnetic dipole decay follows inverse-cube power, yielding a roll-off of <strong>40 dB/decade</strong>.</li>
+            <li><strong>Far-Field (d &ge; 3.52 m):</strong> Plane wave radiation follows inverse-distance, yielding a roll-off of <strong>20 dB/decade</strong>.</li>
+            <li><strong>ETSI &amp; FCC Alignment:</strong> Conversion between E and H is normalized with free space intrinsic impedance ($377\ \Omega$).</li>
+          </ul>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-tech-950 py-4 text-center text-xs text-slate-500">
+    HF (13.56 MHz) Field Strength Calculation Suite &bull; Conforms to ANSI C63.10 Clause 6.4
+  </footer>
+
+  <script>
+    // Constants for 13.56 MHz
+    const FREQUENCY_HZ = 13.56e6;
+    const SPEED_OF_LIGHT = 299792458; // m/s
+    const PI = Math.PI;
+    const WAVELENGTH = SPEED_OF_LIGHT / FREQUENCY_HZ; // ~22.1086 m
+    const D_NEARFIELD = WAVELENGTH / (2 * PI);         // ~3.5186 m (~3.52 m)
+    const Z0_IMPEDANCE_DB = 20 * Math.log10(120 * PI); // ~51.5298 dB (approx 51.53 dB)
+
+    // DOM Elements
+    const dMeasureInput = document.getElementById('d_measure');
+    const fsMaxInput = document.getElementById('fs_max');
+    const dLimitInput = document.getElementById('d_limit');
+    const outputUnitSelect = document.getElementById('output_unit');
+
+    const finalValueEl = document.getElementById('finalValue');
+    const finalUnitEl = document.getElementById('finalUnit');
+    const resDistLabelEl = document.getElementById('resDistLabel');
+    const linearValueEl = document.getElementById('linearValue');
+    const eFieldEquivalentEl = document.getElementById('eFieldEquivalent');
+    const distanceCorrectionSummaryEl = document.getElementById('distanceCorrectionSummary');
+    const regimeBadgeEl = document.getElementById('regimeBadge');
+
+    const step2RegimeEl = document.getElementById('step2Regime');
+    const step2FormulaEl = document.getElementById('step2Formula');
+    const step2MathEl = document.getElementById('step2Math');
+    const step3ResultEl = document.getElementById('step3Result');
+    const step3MathEl = document.getElementById('step3Math');
+    const step4ContainerEl = document.getElementById('step4Container');
+
+    const fsErrorEl = document.getElementById('fs_error');
+    const dErrorEl = document.getElementById('d_error');
+    const unitHelperTextEl = document.getElementById('unitHelperText');
+
+    function calculate() {
+      const dMeasure = parseFloat(dMeasureInput.value);
+      const fsMax = parseFloat(fsMaxInput.value);
+      const dLimit = parseFloat(dLimitInput.value);
+      const unit = outputUnitSelect.value;
+
+      // Validation
+      let isValid = true;
+      if (isNaN(fsMax)) {
+        fsErrorEl.classList.remove('hidden');
+        isValid = false;
+      } else {
+        fsErrorEl.classList.add('hidden');
+      }
+
+      if (isNaN(dLimit) || dLimit <= 0) {
+        dErrorEl.classList.remove('hidden');
+        isValid = false;
+      } else {
+        dErrorEl.classList.add('hidden');
+      }
+
+      if (!isValid) return;
+
+      const dN = D_NEARFIELD; // 3.5186 m
+      let correction = 0;
+      let formulaDescription = '';
+      let mathDescription = '';
+      let regimeText = '';
+
+      if (dMeasure <= dN && dLimit <= dN) {
+        // Case 1: Both in near-field (40 dB/dec)
+        regimeText = "Pure Near-Field (40 dB/dec)";
+        correction = -40 * Math.log10(dLimit / dMeasure);
+        formulaDescription = `Correction = -40·log₁₀(d_limit / d_measure)`;
+        mathDescription = `= -40·log₁₀(${dLimit} / ${dMeasure}) = ${correction.toFixed(2)} dB`;
+
+      } else if (dMeasure >= dN && dLimit >= dN) {
+        // Case 2: Both in far-field (20 dB/dec)
+        regimeText = "Pure Far-Field (20 dB/dec)";
+        correction = -20 * Math.log10(dLimit / dMeasure);
+        formulaDescription = `Correction = -20·log₁₀(d_limit / d_measure)`;
+        mathDescription = `= -20·log₁₀(${dLimit} / ${dMeasure}) = ${correction.toFixed(2)} dB`;
+
+      } else if (dMeasure < dN && dLimit > dN) {
+        // Case 3: Transition from near-field to far-field (e.g. 3m to 10m or 3m to 30m)
+        regimeText = "Near → Far Field Transition";
+        const nearPart = -40 * Math.log10(dN / dMeasure);
+        const farPart = -20 * Math.log10(dLimit / dN);
+        correction = nearPart + farPart;
+        formulaDescription = `Correction = -40·log₁₀(d_nearfield / d_measure) - 20·log₁₀(d_limit / d_nearfield)`;
+        mathDescription = `= -40·log₁₀(${dN.toFixed(3)} / ${dMeasure}) [${nearPart.toFixed(2)} dB] + -20·log₁₀(${dLimit} / ${dN.toFixed(3)}) [${farPart.toFixed(2)} dB] = ${correction.toFixed(2)} dB`;
+
+      } else {
+        // Case 4: Transition from far-field to near-field (e.g. 10m to 2m)
+        regimeText = "Far → Near Field Transition";
+        const farPart = -20 * Math.log10(dN / dMeasure);
+        const nearPart = -40 * Math.log10(dLimit / dN);
+        correction = farPart + nearPart;
+        formulaDescription = `Correction = -20·log₁₀(d_nearfield / d_measure) - 40·log₁₀(d_limit / d_nearfield)`;
+        mathDescription = `= -20·log₁₀(${dN.toFixed(3)} / ${dMeasure}) [${farPart.toFixed(2)} dB] + -40·log₁₀(${dLimit} / ${dN.toFixed(3)}) [${nearPart.toFixed(2)} dB] = ${correction.toFixed(2)} dB`;
+      }
+
+      // Extrapolated electric field in dBµV/m
+      const eFieldLimit = fsMax + correction;
+
+      // H-field or E-field selection
+      let finalResult = 0;
+      let finalUnitText = '';
+
+      if (unit === 'H') {
+        finalResult = eFieldLimit - Z0_IMPEDANCE_DB;
+        finalUnitText = 'dBµA/m';
+        step4ContainerEl.classList.remove('hidden');
+        unitHelperTextEl.innerHTML = `H-field applies <span class="font-mono-code text-teal-400">H = E - 20·log₁₀(377 Ω)</span> (subtracts ~51.53 dB).`;
+      } else {
+        finalResult = eFieldLimit;
+        finalUnitText = 'dBµV/m';
+        step4ContainerEl.classList.add('hidden');
+        unitHelperTextEl.innerHTML = `E-field displays direct distance extrapolation in <span class="font-mono-code text-teal-400">dBµV/m</span>.`;
+      }
+
+      finalValueEl.textContent = finalResult.toFixed(2);
+      finalUnitEl.textContent = finalUnitText;
+      resDistLabelEl.textContent = `${dLimit} m`;
+      regimeBadgeEl.textContent = regimeText;
+      eFieldEquivalentEl.textContent = `${eFieldLimit.toFixed(2)} dBµV/m`;
+      distanceCorrectionSummaryEl.textContent = `${correction >= 0 ? '+' : ''}${correction.toFixed(2)} dB`;
+
+      // Calculate linear equivalent
+      if (unit === 'H') {
+        const uAm = Math.pow(10, finalResult / 20); // µA/m
+        if (uAm >= 1000) {
+          linearValueEl.innerHTML = `&approx; ${(uAm / 1000).toFixed(3)} mA/m (${uAm.toFixed(2)} µA/m)`;
+        } else {
+          linearValueEl.innerHTML = `&approx; ${uAm.toFixed(2)} µA/m (${(uAm / 1000).toFixed(5)} mA/m)`;
+        }
+      } else {
+        const uVm = Math.pow(10, finalResult / 20); // µV/m
+        if (uVm >= 1000000) {
+          linearValueEl.innerHTML = `&approx; ${(uVm / 1000000).toFixed(3)} V/m (${(uVm / 1000).toFixed(2)} mV/m)`;
+        } else if (uVm >= 1000) {
+          linearValueEl.innerHTML = `&approx; ${(uVm / 1000).toFixed(2)} mV/m (${uVm.toFixed(1)} µV/m)`;
+        } else {
+          linearValueEl.innerHTML = `&approx; ${uVm.toFixed(2)} µV/m`;
+        }
+      }
+
+      // Update Breakdown details
+      step2RegimeEl.textContent = `${correction >= 0 ? '+' : ''}${correction.toFixed(2)} dB`;
+      step2FormulaEl.textContent = formulaDescription;
+      step2MathEl.innerHTML = mathDescription;
+
+      step3ResultEl.textContent = `${eFieldLimit.toFixed(2)} dBµV/m`;
+      step3MathEl.innerHTML = `FS<sub>limit</sub> = FS<sub>max</sub> + Correction = ${fsMax.toFixed(2)} + (${correction.toFixed(2)}) = <span class="text-slate-200">${eFieldLimit.toFixed(2)} dBµV/m</span>`;
+    }
+
+    function loadPreset(measure, fs, limit, unit) {
+      dMeasureInput.value = measure.toString();
+      fsMaxInput.value = fs;
+      dLimitInput.value = limit;
+      outputUnitSelect.value = unit;
+      calculate();
+    }
+
+    function setLimitDistance(dist) {
+      dLimitInput.value = dist;
+      calculate();
+    }
+
+    function resetDefaults() {
+      loadPreset(3, 78.87, 10, 'H');
+    }
+
+    function toggleDetails() {
+      const breakdown = document.getElementById('breakdownSection');
+      breakdown.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function copyResult() {
+      const val = finalValueEl.textContent.trim();
+      const unit = finalUnitEl.textContent.trim();
+      const dist = resDistLabelEl.textContent.trim();
+      const copyText = `${val} ${unit} @ ${dist}`;
+
+      // Using document.execCommand for safe iframe environment clipboard copy
+      const tempInput = document.createElement("input");
+      tempInput.value = copyText;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand("copy");
+        const btnText = document.getElementById('copyBtnText');
+        const orig = btnText.textContent;
+        btnText.textContent = "Copied!";
+        setTimeout(() => {
+          btnText.textContent = orig;
+        }, 1800);
+      } catch (err) {
+        console.error("Failed to copy", err);
+      }
+      document.body.removeChild(tempInput);
+    }
+
+    // Event listeners
+    [dMeasureInput, fsMaxInput, dLimitInput, outputUnitSelect].forEach(input => {
+      input.addEventListener('input', calculate);
+      input.addEventListener('change', calculate);
+    });
+
+    // Initial calculation on load
+    window.addEventListener('DOMContentLoaded', () => {
+      calculate();
+    });
+  </script>
+</body>
+</html>
